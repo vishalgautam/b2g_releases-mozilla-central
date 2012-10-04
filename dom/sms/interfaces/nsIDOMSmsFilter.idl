@@ -4,7 +4,7 @@
 
 #include "nsISupports.idl"
 
-[scriptable, builtinclass, uuid(ce055c33-553d-4b0e-9bd8-91d93a057c90)]
+[scriptable, builtinclass, uuid(35f5763b-1114-4a34-8af8-d6ee16118185)]
 interface nsIDOMMozSmsFilter : nsISupports
 {
   // A date that can return null.
@@ -22,6 +22,13 @@ interface nsIDOMMozSmsFilter : nsISupports
   // A DOMString that can return and be set to "sent", "received" or null.
   [Null(Empty)]
   attribute DOMString delivery;
+
+  /**
+   * A DOMString that can return and be set to "normal", "class-0",
+   * "class-1", "class-2", "class-3" or null.
+   */
+  [Null(Empty)]
+  attribute DOMString messageClass;
 
   // A read flag that can be a boolean or undefined.
   [implicit_jscontext]
