@@ -15,7 +15,7 @@ const RIL_MOBILEMESSAGEDATABASESERVICE_CID = Components.ID("{29785f90-6b5b-11e2-
 
 const DEBUG = false;
 const DB_NAME = "sms";
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 const STORE_NAME = "sms";
 const MOST_RECENT_STORE_NAME = "most-recent";
 
@@ -33,6 +33,7 @@ const FILTER_TIMESTAMP = "timestamp";
 const FILTER_NUMBERS = "numbers";
 const FILTER_DELIVERY = "delivery";
 const FILTER_READ = "read";
+const FILTER_DELIVERY_STATUS = "deliveryStatus";
 
 // We can´t create an IDBKeyCursor with a boolean, so we need to use numbers
 // instead.
@@ -198,6 +199,10 @@ MobileMessageDatabaseService.prototype = {
           case 6:
             if (DEBUG) debug("Upgrade to version 7. Use multiple entry indexes.");
             self.upgradeSchema6(event.target.transaction);
+            break;
+          case 7:
+            if (DEBUG) debug("Upgrade to version 8. Including `deliveryStatus` index.");
+            self.upgradeSchema7(event.target.transaction);
             break;
           default:
             event.target.transaction.abort();
@@ -408,6 +413,24 @@ MobileMessageDatabaseService.prototype = {
         [record.receiver, timestamp]
       ];
       record.readIndex = [record.read, timestamp];
+      cursor.update(record);
+      cursor.continue();
+    };
+  },
+
+  upgradeSchema7: function upgradeSchema7(transaction) {
+    let objectStore = transaction.objectStore(STORE_NAME);
+    objectStore.createIndex("deliveryStatus", "deliveryStatusIndex");
+
+    objectStore.openCursor().onsuccess = function(event) {
+      let cursor = event.target.result;
+      if (!cursor) {
+        return;
+      }
+
+      let record = cursor.value;
+      let timestamp = record.timestamp;
+      record.deliveryStatusIndex = [record.deliveryStatus, timestamp];
       cursor.update(record);
       cursor.continue();
     };
@@ -748,6 +771,7 @@ MobileMessageDatabaseService.prototype = {
       deliveryIndex:  [DELIVERY_RECEIVED, aDate],
       numberIndex:    [[sender, aDate], [receiver, aDate]],
       readIndex:      [FILTER_READ_UNREAD, aDate],
+      deliveryStatusIndex: [DELIVERY_STATUS_SUCCESS, aDate],
 
       delivery:       DELIVERY_RECEIVED,
       deliveryStatus: DELIVERY_STATUS_SUCCESS,
@@ -796,6 +820,7 @@ MobileMessageDatabaseService.prototype = {
       deliveryIndex:  [DELIVERY_SENDING, aDate],
       numberIndex:    [[sender, aDate], [receiver, aDate]],
       readIndex:      [FILTER_READ_READ, aDate],
+      deliveryStatusIndex: [aDeliveryStatus, aDate],
 
       delivery:       DELIVERY_SENDING,
       deliveryStatus: aDeliveryStatus,
@@ -1024,6 +1049,7 @@ MobileMessageDatabaseService.prototype = {
             " delivery: " + filter.delivery +
             " numbers: " + filter.numbers +
             " read: " + filter.read +
+            " deliveryStatus: " + filter.deliveryStatus +
             " reverse: " + reverse);
     }
 
@@ -1082,7 +1108,8 @@ MobileMessageDatabaseService.prototype = {
 
       // We support filtering by date range only (see `else` block below) or
       // by number/delivery status/read status with an optional date range.
-      if (filter.delivery || filter.numbers || filter.read != undefined) {
+      if (filter.delivery || filter.numbers || filter.deliveryStatus ||
+          filter.read != undefined) {
         let multiFiltersGotCb = self.onNextMessageInMultiFiltersGot
                                     .bind(self, store, messageList);
 
@@ -1126,6 +1153,7 @@ MobileMessageDatabaseService.prototype = {
           let numberOfContexts = 0;
           if (filter.delivery) numberOfContexts++;
           if (filter.numbers) numberOfContexts++;
+          if (filter.deliveryStatus) numberOfContexts++;
           if (filter.read != undefined) numberOfContexts++;
           singleFilter = numberOfContexts == 1;
         }
@@ -1243,6 +1271,13 @@ MobileMessageDatabaseService.prototype = {
               request.onerror = multiNumbersErrorCb.bind(null, 1);
             }
           }
+        }
+
+        // Retrieve the keys from the 'deliveryStatus' index that matches the
+        // value of filter.deliveryStatus.
+        if (filter.deliveryStatus) {
+          if (DEBUG) debug("filter.deliveryStatus " + filter.deliveryStatus);
+          createSimpleRangedRequest("deliveryStatus", filter.deliveryStatus);
         }
 
         // Retrieve the keys from the 'read' index that matches the value of
