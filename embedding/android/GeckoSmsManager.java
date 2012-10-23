@@ -346,6 +346,7 @@ public class GeckoSmsManager
    * Keep the following values in sync with |MessageClass| in:
    * dom/sms/src/Types.h
    */
+  private final static int kMessageClassUnknown = -1;
   private final static int kMessageClassNormal  = 0;
   private final static int kMessageClassClass0  = 1;
   private final static int kMessageClassClass1  = 2;
@@ -730,22 +731,24 @@ public class GeckoSmsManager
     }
   }
 
-  public void createMessageList(long aStartDate, long aEndDate, String[] aNumbers, int aNumbersCount, int aDeliveryState, boolean aReverse, int aRequestId) {
+  public void createMessageList(long aStartDate, long aEndDate, String[] aNumbers, int aNumbersCount, int aDeliveryState, int aMessageClass, boolean aReverse, int aRequestId) {
     class CreateMessageListRunnable implements Runnable {
       private long     mStartDate;
       private long     mEndDate;
       private String[] mNumbers;
       private int      mNumbersCount;
       private int      mDeliveryState;
+      private int      mMessageClass;
       private boolean  mReverse;
       private int      mRequestId;
 
-      CreateMessageListRunnable(long aStartDate, long aEndDate, String[] aNumbers, int aNumbersCount, int aDeliveryState, boolean aReverse, int aRequestId) {
+      CreateMessageListRunnable(long aStartDate, long aEndDate, String[] aNumbers, int aNumbersCount, int aDeliveryState, int aMessageClass, boolean aReverse, int aRequestId) {
         mStartDate = aStartDate;
         mEndDate = aEndDate;
         mNumbers = aNumbers;
         mNumbersCount = aNumbersCount;
         mDeliveryState = aDeliveryState;
+        mMessageClass = aMessageClass;
         mReverse = aReverse;
         mRequestId = aRequestId;
       }
@@ -786,6 +789,11 @@ public class GeckoSmsManager
             restrictions.add("type = " + kSmsTypeInbox);
           } else {
             throw new UnexpectedDeliveryStateException();
+          }
+
+          if (mMessageClass != kMessageClassUnknown) {
+            // Android doesn't store message class at all.
+            throw new UnexpectedMessageClassException();
           }
 
           String restrictionText = restrictions.size() > 0 ? restrictions.get(0) : "";
@@ -832,6 +840,9 @@ public class GeckoSmsManager
         } catch (UnexpectedDeliveryStateException e) {
           Log.e("GeckoSmsManager", "Unexcepted delivery state type: " + e);
           GeckoAppShell.notifyReadingMessageListFailed(kUnknownError, mRequestId);
+        } catch (UnexpectedMessageClassException e) {
+          Log.e("GeckoSmsManager", "Unexcepted message class type: " + e);
+          GeckoAppShell.notifyReadingMessageListFailed(kUnknownError, mRequestId);
         } catch (Exception e) {
           Log.e("GeckoSmsManager", "Error while trying to create a message list cursor: " + e);
           GeckoAppShell.notifyReadingMessageListFailed(kUnknownError, mRequestId);
@@ -846,7 +857,7 @@ public class GeckoSmsManager
       }
     }
 
-    if (!SmsIOThread.getInstance().execute(new CreateMessageListRunnable(aStartDate, aEndDate, aNumbers, aNumbersCount, aDeliveryState, aReverse, aRequestId))) {
+    if (!SmsIOThread.getInstance().execute(new CreateMessageListRunnable(aStartDate, aEndDate, aNumbers, aNumbersCount, aDeliveryState, aMessageClass, aReverse, aRequestId))) {
       Log.e("GeckoSmsManager", "Failed to add CreateMessageListRunnable to the SmsIOThread");
       GeckoAppShell.notifyReadingMessageListFailed(kUnknownError, aRequestId);
     }
@@ -970,6 +981,10 @@ public class GeckoSmsManager
 
   class UnexpectedDeliveryStateException extends Exception {
     private static final long serialVersionUID = 5044567998961920L;
+  }
+
+  class UnexpectedMessageClassException extends Exception {
+    private static final long serialVersionUID = 163186984244990160L;
   }
 
   class UnmatchingIdException extends Exception {
