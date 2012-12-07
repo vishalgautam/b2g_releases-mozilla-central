@@ -4126,6 +4126,9 @@ pref("dom.mms.retrieval_mode", "manual");
 pref("dom.mms.retrievalRetryCount", 3);
 pref("dom.mms.retrievalRetryInterval", 300000);
 
+// RIL settings.
+pref("ril.numRadioInterfaces", 1);
+
 // If the user puts a finger down on an element and we think the user
 // might be executing a pan gesture, how long do we wait before
 // tentatively deciding the gesture is actually a tap and activating
