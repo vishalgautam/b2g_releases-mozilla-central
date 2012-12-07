@@ -213,6 +213,22 @@ XPCOMUtils.defineLazyGetter(this, "gAudioManager", function getAudioManager() {
 
 
 function RadioInterfaceLayer() {
+  ppmm.addMessageListener("child-process-shutdown", this);
+  for (let msgname of RIL_IPC_TELEPHONY_MSG_NAMES) {
+    ppmm.addMessageListener(msgname, this);
+  }
+  for (let msgname of RIL_IPC_MOBILECONNECTION_MSG_NAMES) {
+    ppmm.addMessageListener(msgname, this);
+  }
+  for (let msgname of RIL_IPC_VOICEMAIL_MSG_NAMES) {
+    ppmm.addMessageListener(msgname, this);
+  }
+  for (let msgname of RIL_IPC_CELLBROADCAST_MSG_NAMES) {
+    ppmm.addMessageListener(msgname, this);
+  }
+
+  Services.obs.addObserver(this, "xpcom-shutdown", false);
+
   let numRadioInterfaces;
   try {
     numRadioInterfaces = Services.prefs.getIntPref("ril.numRadioInterfaces");
@@ -232,9 +248,89 @@ RadioInterfaceLayer.prototype = {
                                     classDescription: "RadioInterfaceLayer",
                                     interfaces: [Ci.nsIRadioInterfaceLayer]}),
 
-  QueryInterface: XPCOMUtils.generateQI([Ci.nsIRadioInterfaceLayer]),
+  QueryInterface: XPCOMUtils.generateQI([Ci.nsIRadioInterfaceLayer,
+                                         Ci.nsIObserver]),
 
-  radioInterfaces: null
+  radioInterfaces: null,
+
+  /**
+   * Process a message from the content process.
+   */
+  receiveMessage: function receiveMessage(msg) {
+    debug("Received '" + msg.name + "' message from content process");
+    if (msg.name == "child-process-shutdown") {
+      // By the time we receive child-process-shutdown, the child process has
+      // already forgotten its permissions so we need to unregister the target
+      // for every permission.
+      this.radioInterfaces.forEach(function (element) {
+        element.unregisterMessageTarget(null, msg.target);
+      });
+      return;
+    }
+
+    if (RIL_IPC_TELEPHONY_MSG_NAMES.indexOf(msg.name) != -1) {
+      if (!msg.target.assertPermission("telephony")) {
+        debug("Telephony message " + msg.name +
+              " from a content process with no 'telephony' privileges.");
+        return null;
+      }
+    } else if (RIL_IPC_MOBILECONNECTION_MSG_NAMES.indexOf(msg.name) != -1) {
+      if (!msg.target.assertPermission("mobileconnection")) {
+        debug("MobileConnection message " + msg.name +
+              " from a content process with no 'mobileconnection' privileges.");
+        return null;
+      }
+    } else if (RIL_IPC_VOICEMAIL_MSG_NAMES.indexOf(msg.name) != -1) {
+      if (!msg.target.assertPermission("voicemail")) {
+        debug("Voicemail message " + msg.name +
+              " from a content process with no 'voicemail' privileges.");
+        return null;
+      }
+    } else if (RIL_IPC_CELLBROADCAST_MSG_NAMES.indexOf(msg.name) != -1) {
+      if (!msg.target.assertPermission("cellbroadcast")) {
+        debug("Cell Broadcast message " + msg.name +
+              " from a content process with no 'cellbroadcast' privileges.");
+        return null;
+      }
+    } else {
+      debug("Ignoring unknown message type: " + msg.name);
+      return null;
+    }
+
+    let iface = this.radioInterfaces[msg.json.subscriptionId];
+    if (!iface) {
+      debug("Ignoring messages to unknown radio interface: " + msg.name);
+      return null;
+    }
+
+    iface.receiveMessage(msg);
+  },
+
+  // nsIObserver
+
+  observe: function observe(subject, topic, data) {
+    switch (topic) {
+      case "xpcom-shutdown":
+        ppmm.removeMessageListener("child-process-shutdown", this);
+        for (let msgname of RIL_IPC_TELEPHONY_MSG_NAMES) {
+          ppmm.removeMessageListener(msgname, this);
+        }
+        for (let msgname of RIL_IPC_MOBILECONNECTION_MSG_NAMES) {
+          ppmm.removeMessageListener(msgname, this);
+        }
+        for (let msgname of RIL_IPC_VOICEMAIL_MSG_NAMES) {
+          ppmm.removeMessageListener(msgname, this);
+        }
+        for (let msgname of RIL_IPC_CELLBROADCAST_MSG_NAMES) {
+          ppmm.removeMessageListener(msgname, this);
+        }
+        ppmm = null;
+
+        Services.obs.removeObserver(this, "xpcom-shutdown");
+        break;
+    }
+  }
+
 };
 
 function RadioInterface(subscriptionId) {
@@ -350,19 +446,6 @@ function RadioInterface(subscriptionId) {
   this._messageManagerByTopic = {};
   this._topicList = [];
 
-  ppmm.addMessageListener("child-process-shutdown", this);
-  for (let msgname of RIL_IPC_TELEPHONY_MSG_NAMES) {
-    ppmm.addMessageListener(msgname, this);
-  }
-  for (let msgname of RIL_IPC_MOBILECONNECTION_MSG_NAMES) {
-    ppmm.addMessageListener(msgname, this);
-  }
-  for (let msgname of RIL_IPC_VOICEMAIL_MSG_NAMES) {
-    ppmm.addMessageListener(msgname, this);
-  }
-  for (let msgname of RIL_IPC_CELLBROADCAST_MSG_NAMES) {
-    ppmm.addMessageListener(msgname, this);
-  }
   Services.obs.addObserver(this, "xpcom-shutdown", false);
   Services.obs.addObserver(this, kMozSettingsChangedObserverTopic, false);
   Services.obs.addObserver(this, kSysMsgListenerReadyObserverTopic, false);
@@ -389,137 +472,99 @@ RadioInterface.prototype = {
    * Process a message from the content process.
    */
   receiveMessage: function receiveMessage(msg) {
-    debug("Received '" + msg.name + "' message from content process");
-    if (msg.name == "child-process-shutdown") {
-      // By the time we receive child-process-shutdown, the child process has
-      // already forgotten its permissions so we need to unregister the target
-      // for every permission.
-      this.unregisterMessageTarget(null, msg.target);
-      return;
-    }
-
-    if (RIL_IPC_TELEPHONY_MSG_NAMES.indexOf(msg.name) != -1) {
-      if (!msg.target.assertPermission("telephony")) {
-        debug("Telephony message " + msg.name +
-              " from a content process with no 'telephony' privileges.");
-        return null;
-      }
-    } else if (RIL_IPC_MOBILECONNECTION_MSG_NAMES.indexOf(msg.name) != -1) {
-      if (!msg.target.assertPermission("mobileconnection")) {
-        debug("MobileConnection message " + msg.name +
-              " from a content process with no 'mobileconnection' privileges.");
-        return null;
-      }
-    } else if (RIL_IPC_VOICEMAIL_MSG_NAMES.indexOf(msg.name) != -1) {
-      if (!msg.target.assertPermission("voicemail")) {
-        debug("Voicemail message " + msg.name +
-              " from a content process with no 'voicemail' privileges.");
-        return null;
-      }
-    } else if (RIL_IPC_CELLBROADCAST_MSG_NAMES.indexOf(msg.name) != -1) {
-      if (!msg.target.assertPermission("cellbroadcast")) {
-        debug("Cell Broadcast message " + msg.name +
-              " from a content process with no 'cellbroadcast' privileges.");
-        return null;
-      }
-    } else {
-      debug("Ignoring unknown message type: " + msg.name);
-      return null;
-    }
-
     switch (msg.name) {
       case "RIL:GetRilContext":
         // This message is sync.
         return this.rilContext;
       case "RIL:EnumerateCalls":
         this.saveRequestTarget(msg);
-        this.enumerateCalls(msg.json);
+        this.enumerateCalls(msg.json.data);
         break;
       case "RIL:GetMicrophoneMuted":
         // This message is sync.
         return this.microphoneMuted;
       case "RIL:SetMicrophoneMuted":
-        this.microphoneMuted = msg.json;
+        this.microphoneMuted = msg.json.data;
         break;
       case "RIL:GetSpeakerEnabled":
         // This message is sync.
         return this.speakerEnabled;
       case "RIL:SetSpeakerEnabled":
-        this.speakerEnabled = msg.json;
+        this.speakerEnabled = msg.json.data;
         break;
       case "RIL:StartTone":
-        this.startTone(msg.json);
+        this.startTone(msg.json.data);
         break;
       case "RIL:StopTone":
         this.stopTone();
         break;
       case "RIL:Dial":
-        this.dial(msg.json);
+        this.dial(msg.json.data);
         break;
       case "RIL:DialEmergency":
-        this.dialEmergency(msg.json);
+        this.dialEmergency(msg.json.data);
         break;
       case "RIL:HangUp":
-        this.hangUp(msg.json);
+        this.hangUp(msg.json.data);
         break;
       case "RIL:AnswerCall":
-        this.answerCall(msg.json);
+        this.answerCall(msg.json.data);
         break;
       case "RIL:RejectCall":
-        this.rejectCall(msg.json);
+        this.rejectCall(msg.json.data);
         break;
       case "RIL:HoldCall":
-        this.holdCall(msg.json);
+        this.holdCall(msg.json.data);
         break;
       case "RIL:ResumeCall":
-        this.resumeCall(msg.json);
+        this.resumeCall(msg.json.data);
         break;
       case "RIL:RegisterTelephonyMsg":
         this.registerMessageTarget("telephony", msg.target);
         break;
       case "RIL:GetAvailableNetworks":
         this.saveRequestTarget(msg);
-        this.getAvailableNetworks(msg.json.requestId);
+        this.getAvailableNetworks(msg.json.data.requestId);
         break;
       case "RIL:SelectNetwork":
         this.saveRequestTarget(msg);
-        this.selectNetwork(msg.json);
+        this.selectNetwork(msg.json.data);
         break;
       case "RIL:SelectNetworkAuto":
         this.saveRequestTarget(msg);
-        this.selectNetworkAuto(msg.json.requestId);
+        this.selectNetworkAuto(msg.json.data.requestId);
         break;
       case "RIL:GetCardLock":
         this.saveRequestTarget(msg);
-        this.getCardLock(msg.json);
+        this.getCardLock(msg.json.data);
         break;
       case "RIL:UnlockCardLock":
         this.saveRequestTarget(msg);
-        this.unlockCardLock(msg.json);
+        this.unlockCardLock(msg.json.data);
         break;
       case "RIL:SetCardLock":
         this.saveRequestTarget(msg);
-        this.setCardLock(msg.json);
+        this.setCardLock(msg.json.data);
         break;
       case "RIL:SendMMI":
         this.saveRequestTarget(msg);
-        this.sendMMI(msg.json);
+        this.sendMMI(msg.json.data);
         break;
       case "RIL:CancelMMI":
         this.saveRequestTarget(msg);
-        this.cancelMMI(msg.json);
+        this.cancelMMI(msg.json.data);
         break;
       case "RIL:SendStkResponse":
-        this.sendStkResponse(msg.json);
+        this.sendStkResponse(msg.json.data);
         break;
       case "RIL:SendStkMenuSelection":
-        this.sendStkMenuSelection(msg.json);
+        this.sendStkMenuSelection(msg.json.data);
         break;
       case "RIL:SendStkTimerExpiration":
-        this.sendStkTimerExpiration(msg.json);
+        this.sendStkTimerExpiration(msg.json.data);
         break;
       case "RIL:SendStkEventDownload":
-        this.sendStkEventDownload(msg.json);
+        this.sendStkEventDownload(msg.json.data);
         break;
       case "RIL:IccOpenChannel":
         this.saveRequestTarget(msg);
@@ -544,11 +589,11 @@ RadioInterface.prototype = {
         break;
       case "RIL:SetCallForwardingOption":
         this.saveRequestTarget(msg);
-        this.setCallForwardingOption(msg.json);
+        this.setCallForwardingOption(msg.json.data);
         break;
       case "RIL:GetCallForwardingOption":
         this.saveRequestTarget(msg);
-        this.getCallForwardingOption(msg.json);
+        this.getCallForwardingOption(msg.json.data);
         break;
       case "RIL:RegisterCellBroadcastMsg":
         this.registerMessageTarget("cellbroadcast", msg.target);
@@ -749,7 +794,7 @@ RadioInterface.prototype = {
 
   _messageManagerByRequest: null,
   saveRequestTarget: function saveRequestTarget(msg) {
-    let requestId = msg.json.requestId;
+    let requestId = msg.json.data.requestId;
     if (!requestId) {
       // The content is not interested in a response;
       return;
@@ -1895,26 +1940,12 @@ RadioInterface.prototype = {
         this.handleSettingsChange(setting.key, setting.value, setting.message);
         break;
       case "xpcom-shutdown":
-        ppmm.removeMessageListener("child-process-shutdown", this);
-        for (let msgname of RIL_IPC_TELEPHONY_MSG_NAMES) {
-          ppmm.removeMessageListener(msgname, this);
-        }
-        for (let msgname of RIL_IPC_MOBILECONNECTION_MSG_NAMES) {
-          ppmm.removeMessageListener(msgname, this);
-        }
-        for (let msgname of RIL_IPC_VOICEMAIL_MSG_NAMES) {
-          ppmm.removeMessageListener(msgname, this);
-        }
-        for (let msgname of RIL_IPC_CELLBROADCAST_MSG_NAMES) {
-          ppmm.removeMessageListener(msgname, this);
-        }
         // Cancel the timer for the call-ring wake lock.
         this._cancelCallRingWakeLockTimer();
         // Shutdown all RIL network interfaces
         this.dataNetworkInterface.shutdown();
         this.mmsNetworkInterface.shutdown();
         this.suplNetworkInterface.shutdown();
-        ppmm = null;
         Services.obs.removeObserver(this, "xpcom-shutdown");
         Services.obs.removeObserver(this, kMozSettingsChangedObserverTopic);
         Services.obs.removeObserver(this, kSysClockChangeObserverTopic);
