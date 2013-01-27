@@ -1,0 +1,25 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsIDOMEvent.idl"
+
+[scriptable, builtinclass, uuid(5a58e2dc-17ba-489f-b55a-cef68ad85b76)]
+interface nsIDOMMozStkCommandEvent : nsIDOMEvent
+{
+  /**
+   * See nsIDOMMozStkCommand for the detail of command.
+   */
+  [implicit_jscontext]
+  readonly attribute jsval command;
+
+  [noscript] void initMozStkCommandEvent(in DOMString aType,
+                                         in boolean aCanBubble,
+                                         in boolean aCancelable,
+                                         in jsval aCommand);
+};
+
+dictionary MozStkCommandEventInit : EventInit
+{
+  jsval command;
+};

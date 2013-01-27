@@ -6,7 +6,8 @@
 #include "nsIDOMClassInfo.h"
 #include "IccManager.h"
 #include "SimToolKit.h"
-#include "StkCommandEvent.h"
+#include "nsIDOMMozStkCommandEvent.h"
+#include "GeneratedEvents.h"
 
 #define NS_RILCONTENTHELPER_CONTRACTID "@mozilla.org/ril/content-helper;1"
 
@@ -166,8 +167,21 @@ NS_IMPL_EVENT_HANDLER(IccManager, stksessionend)
 NS_IMETHODIMP
 IccManager::NotifyStkCommand(const nsAString& aMessage)
 {
-  nsRefPtr<StkCommandEvent> event = StkCommandEvent::Create(this, aMessage);
-  NS_ASSERTION(event, "This should never fail!");
+  jsval value;
+  if (!aMessage.IsEmpty()) {
+    nsCOMPtr<nsIJSON> json(new nsJSON());
+    nsresult rv = json->DecodeToJSVal(aMessage, aCx, &value);
+    NS_ENSURE_SUCCESS(rv, rv);
+  } else {
+    value = JSVAL_VOID;
+  }
+
+  nsCOMPtr<nsIDOMEvent> event;
+  NS_NewDOMMozVoicemailEvent(getter_AddRefs(event), nullptr, nullptr);
+  nsCOMPtr<nsIDOMMozVoicemailEvent> ce = do_QueryInterface(event);
+  nsresult rv = ce->InitMozVoicemailEvent(STKCOMMAND_EVENTNAME,
+                                          false, false, &value);
+  MOZ_ASSERT(NS_SUCEEDED(rv));
 
   return event->Dispatch(ToIDOMEventTarget(), NS_LITERAL_STRING("stkcommand"));
 }
