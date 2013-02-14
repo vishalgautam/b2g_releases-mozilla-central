@@ -4356,6 +4356,7 @@ RIL[REQUEST_GET_CURRENT_CALLS] = function REQUEST_GET_CURRENT_CALLS(length, opti
       };
     }
 
+    debug("Got call: " + JSON.stringify(call));
     calls[call.callIndex] = call;
   }
   this._processCalls(calls);
