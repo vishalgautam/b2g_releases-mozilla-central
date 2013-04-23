@@ -7,6 +7,7 @@
 include protocol PBlob;
 include protocol PBluetooth;
 include protocol PBrowser;
+include protocol PCellBroadcast;
 include protocol PCompositor;
 include protocol PCrashReporter;
 include protocol PExternalHelperApp;
@@ -236,6 +237,7 @@ rpc protocol PContent
     manages PBlob;
     manages PBluetooth;
     manages PBrowser;
+    manages PCellBroadcast;
     manages PCrashReporter;
     manages PDeviceStorageRequest;
     manages PExternalHelperApp;
@@ -368,6 +370,8 @@ parent:
         returns (bool isOffline);
 
     PDeviceStorageRequest(DeviceStorageParams params);
+
+    PCellBroadcast();
 
     sync PCrashReporter(NativeThreadId tid, uint32_t processType);
 

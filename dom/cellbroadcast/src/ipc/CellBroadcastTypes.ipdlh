@@ -1,0 +1,43 @@
+/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set sw=2 ts=8 et ft=cpp : */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+include "mozilla/dom/cellbroadcast/Types.h";
+
+using GeographicalScope;
+using MessageClass;
+using WarningType;
+
+namespace mozilla {
+namespace dom {
+namespace cellbroadcast {
+
+struct EtwsData
+{
+  WarningType warningType;
+  bool        emergencyUserAlert;
+  bool        popup;
+};
+
+union ExtraData
+{
+  EtwsData;
+};
+
+struct MessageData
+{
+  GeographicalScope geographicalScope;
+  uint16_t          messageCode;
+  uint16_t          messageId;
+  nsString          language;
+  nsString          body;
+  MessageClass      messageClass;
+  uint64_t          timestamp; // ms since epoch.
+  ExtraData         extra;
+};
+
+} // namespace cellbroadcast
+} // namespace dom
+} // namespace mozilla

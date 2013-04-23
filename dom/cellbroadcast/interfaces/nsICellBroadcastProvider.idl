@@ -6,6 +6,11 @@
 
 interface nsIDOMMozCellBroadcastMessage;
 
+%{C++
+#define CELLBROADCAST_SERVICE_CID { 0x091589e8, 0x7551, 0x48ee, { 0xb9, 0xc2, 0xe2, 0x3e, 0x0b, 0x51, 0xe8, 0x4c } }
+#define CELLBROADCAST_SERVICE_CONTRACTID "@mozilla.org/cellbroadcast/service;1"
+%}
+
 [scriptable, uuid(4c6fb794-31bd-4ed7-b21a-34b82aa3efbe)]
 interface nsICellBroadcastListener : nsISupports
 {
@@ -30,6 +35,6 @@ interface nsICellBroadcastProvider : nsISupports
    * RadioInterfaceLayer in the chrome process. Only a content process that has
    * the 'cellbroadcast' permission is allowed to register.
    */
-  void registerCellBroadcastMsg(in nsICellBroadcastListener listener);
-  void unregisterCellBroadcastMsg(in nsICellBroadcastListener listener);
+  void register(in nsICellBroadcastListener listener);
+  void unregister(in nsICellBroadcastListener listener);
 };
