@@ -244,6 +244,9 @@ private:
     virtual PBlobParent* AllocPBlob(const BlobConstructorParams& aParams);
     virtual bool DeallocPBlob(PBlobParent*);
 
+    virtual PCellBroadcastParent* AllocPCellBroadcast();
+    virtual bool DeallocPCellBroadcast(PCellBroadcastParent*);
+
     virtual PCrashReporterParent* AllocPCrashReporter(const NativeThreadId& tid,
                                                       const uint32_t& processType);
     virtual bool DeallocPCrashReporter(PCrashReporterParent* crashreporter);

@@ -91,6 +91,9 @@ public:
     virtual PBlobChild* AllocPBlob(const BlobConstructorParams& aParams);
     virtual bool DeallocPBlob(PBlobChild*);
 
+    virtual PCellBroadcastChild* AllocPCellBroadcast();
+    virtual bool DeallocPCellBroadcast(PCellBroadcastChild*);
+
     virtual PCrashReporterChild*
     AllocPCrashReporter(const mozilla::dom::NativeThreadId& id,
                         const uint32_t& processType);

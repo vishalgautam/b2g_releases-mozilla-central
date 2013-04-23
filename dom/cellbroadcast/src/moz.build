@@ -11,6 +11,8 @@ EXPORTS.mozilla.dom += [
 ]
 
 EXPORTS.mozilla.dom.cellbroadcast += [
+    'CellBroadcastChild.h',
+    'CellBroadcastParent.h',
     'ServiceFactory.h',
     'Types.h',
 ]

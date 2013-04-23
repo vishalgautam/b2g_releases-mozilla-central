@@ -33,6 +33,7 @@
 #include "mozilla/dom/bluetooth/PBluetoothParent.h"
 #include "mozilla/dom/devicestorage/DeviceStorageRequestParent.h"
 #include "SmsParent.h"
+#include "mozilla/dom/cellbroadcast/CellBroadcastParent.h"
 #include "mozilla/Hal.h"
 #include "mozilla/hal_sandbox/PHalParent.h"
 #include "mozilla/ipc/TestShellParent.h"
@@ -125,6 +126,7 @@ static const char* sClipboardTextFlavors[] = { kUnicodeMime };
 using base::ChildPrivileges;
 using base::KillProcess;
 using namespace mozilla::dom::bluetooth;
+using namespace mozilla::dom::cellbroadcast;
 using namespace mozilla::dom::devicestorage;
 using namespace mozilla::dom::indexedDB;
 using namespace mozilla::dom::power;
@@ -1779,6 +1781,25 @@ ContentParent::KillHard()
         FROM_HERE,
         NewRunnableFunction(&ProcessWatcher::EnsureProcessTerminated,
                             OtherProcess(), /*force=*/true));
+}
+
+PCellBroadcastParent*
+ContentParent::AllocPCellBroadcast()
+{
+    if (!AssertAppProcessPermission(this, "sms")) {
+        return nullptr;
+    }
+
+    CellBroadcastParent* parent = new CellBroadcastParent();
+    parent->AddRef();
+    return parent;
+}
+
+bool
+ContentParent::DeallocPCellBroadcast(PCellBroadcastParent* aCellBroadcast)
+{
+    static_cast<CellBroadcastParent*>(aCellBroadcast)->Release();
+    return true;
 }
 
 PCrashReporterParent*

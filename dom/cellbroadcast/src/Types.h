@@ -50,4 +50,38 @@ enum WarningType
 } // namespace dom
 } // namespace mozilla
 
+namespace IPC {
+
+/**
+ * GeographicalScope serializer.
+ */
+template <>
+struct ParamTraits<mozilla::dom::cellbroadcast::GeographicalScope>
+  : public EnumSerializer<mozilla::dom::cellbroadcast::GeographicalScope,
+                          mozilla::dom::cellbroadcast::eGeographicalScope_CellImmediate,
+                          mozilla::dom::cellbroadcast::eGeographicalScope_EndGuard>
+{};
+
+/**
+ * MessageClass serializer.
+ */
+template <>
+struct ParamTraits<mozilla::dom::cellbroadcast::MessageClass>
+  : public EnumSerializer<mozilla::dom::cellbroadcast::MessageClass,
+                          mozilla::dom::cellbroadcast::eMessageClass_Normal,
+                          mozilla::dom::cellbroadcast::eMessageClass_EndGuard>
+{};
+
+/**
+ * WarningType serializer.
+ */
+template <>
+struct ParamTraits<mozilla::dom::cellbroadcast::WarningType>
+  : public EnumSerializer<mozilla::dom::cellbroadcast::WarningType,
+                          mozilla::dom::cellbroadcast::eWarningType_EarthQuake,
+                          mozilla::dom::cellbroadcast::eWarningType_EndGuard>
+{};
+
+} // namespace IPC
+
 #endif // mozilla_dom_cellbroadcast_Types_h

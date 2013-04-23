@@ -88,6 +88,7 @@
 #endif
 
 #include "mozilla/dom/indexedDB/PIndexedDBChild.h"
+#include "mozilla/dom/cellbroadcast/CellBroadcastChild.h"
 #include "mozilla/dom/mobilemessage/SmsChild.h"
 #include "mozilla/dom/devicestorage/DeviceStorageRequestChild.h"
 #include "mozilla/dom/bluetooth/PBluetoothChild.h"
@@ -113,6 +114,7 @@ using namespace base;
 using namespace mozilla;
 using namespace mozilla::docshell;
 using namespace mozilla::dom::bluetooth;
+using namespace mozilla::dom::cellbroadcast;
 using namespace mozilla::dom::devicestorage;
 using namespace mozilla::dom::ipc;
 using namespace mozilla::dom::mobilemessage;
@@ -711,6 +713,20 @@ ContentChild::GetOrCreateActorForBlob(nsIDOMBlob* aBlob)
       }
 
   return actor;
+}
+
+PCellBroadcastChild*
+ContentChild::AllocPCellBroadcast()
+{
+    NS_NOTREACHED("We should never be manually allocating PCellBroadcast actors");
+    return nullptr;
+}
+
+bool
+ContentChild::DeallocPCellBroadcast(PCellBroadcastChild* aCellBroadcast)
+{
+    delete aCellBroadcast;
+    return true;
 }
 
 PCrashReporterChild*

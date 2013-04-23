@@ -5,6 +5,8 @@
 
 #include "mozilla/dom/cellbroadcast/ServiceFactory.h"
 #include "CellBroadcastService.h"
+#include "CellBroadcastIPCService.h"
+#include "nsXULAppAPI.h" // For XRE_GetProcessType()
 
 using namespace mozilla::dom::cellbroadcast;
 
@@ -13,7 +15,11 @@ ServiceFactory::CreateCellBroadcastService()
 {
   nsCOMPtr<nsICellBroadcastProvider> service;
 
-  service = new CellBroadcastService();
+  if (XRE_GetProcessType() == GeckoProcessType_Content) {
+    service = new CellBroadcastIPCService();
+  } else {
+    service = new CellBroadcastService();
+  }
 
   return service.forget();
 }

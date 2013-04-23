@@ -4,4 +4,5 @@
 
 IPDLSRCS = \
   CellBroadcastTypes.ipdlh \
+  PCellBroadcast.ipdl \
   $(NULL)
