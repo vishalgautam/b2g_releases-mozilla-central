@@ -158,6 +158,7 @@ webidl_files = \
   MediaError.webidl \
   MediaStream.webidl \
   MessageEvent.webidl \
+  MobileMessageThread.webidl \
   MouseEvent.webidl \
   MouseScrollEvent.webidl \
   MozActivity.webidl \

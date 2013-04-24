@@ -4,11 +4,12 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "MobileMessageThread.h"
-#include "nsIDOMClassInfo.h"
 #include "jsapi.h"           // For OBJECT_TO_JSVAL and JS_NewDateObjectMsec
 #include "jsfriendapi.h"     // For js_DateGetMsecSinceEpoch
-#include "nsJSUtils.h"       // For nsDependentJSString
+#include "mozilla/dom/MobileMessageThreadBinding.h"
 #include "nsContentUtils.h"  // For nsTArrayHelpers.h
+#include "nsIDOMClassInfo.h"
+#include "nsJSUtils.h"       // For nsDependentJSString
 #include "nsTArrayHelpers.h" // For nsTArrayToJSArray
 
 using namespace mozilla::dom::mobilemessage;
@@ -110,6 +111,12 @@ MobileMessageThread::MobileMessageThread(const ThreadData& aData)
   : mData(aData)
 {
   MOZ_ASSERT(aData.participants().Length());
+}
+
+JSObject*
+MobileMessageThread::WrapObject(JSContext* aCx, JSObject* aScope)
+{
+  return MobileMessageThreadBinding::Wrap(aCx, aScope, this);
 }
 
 NS_IMETHODIMP

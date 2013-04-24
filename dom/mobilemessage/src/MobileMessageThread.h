@@ -40,6 +40,8 @@ public:
                          JSContext* aCx,
                          nsIDOMMozMobileMessageThread** aThread);
 
+  JSObject* WrapObject(JSContext* aCx, JSObject* aScope) MOZ_OVERRIDE;
+
   const ThreadData& GetData() const { return mData; }
 
 private:
