@@ -18,16 +18,8 @@ namespace dom {
 
 class CellBroadcast MOZ_FINAL : public nsDOMEventTargetHelper
                               , public nsIDOMMozCellBroadcast
+                              , public nsICellBroadcastListener
 {
-  /**
-   * Class CellBroadcast doesn't actually inherit nsICellBroadcastListener.
-   * Instead, it owns an nsICellBroadcastListener derived instance mListener
-   * and passes it to nsICellBroadcastProvider. The onreceived events are first
-   * delivered to mListener and then forwarded to its owner, CellBroadcast. See
-   * also bug 775997 comment #51.
-   */
-  class Listener;
-
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMMOZCELLBROADCAST
@@ -42,7 +34,6 @@ public:
 
 private:
   nsCOMPtr<nsICellBroadcastProvider> mProvider;
-  nsRefPtr<Listener> mListener;
 };
 
 } // namespace dom

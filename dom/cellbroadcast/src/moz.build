@@ -10,3 +10,8 @@ EXPORTS.mozilla.dom += [
     'CellBroadcast.h',
 ]
 
+EXPORTS.mozilla.dom.cellbroadcast += [
+    'ServiceFactory.h',
+    'Types.h',
+]
+

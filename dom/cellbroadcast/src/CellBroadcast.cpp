@@ -10,37 +10,7 @@
 #include "nsDOMClassInfo.h"
 #include "GeneratedEvents.h"
 
-#define NS_RILCONTENTHELPER_CONTRACTID "@mozilla.org/ril/content-helper;1"
-
 using namespace mozilla::dom;
-
-/**
- * CellBroadcast::Listener Implementation.
- */
-
-class CellBroadcast::Listener : public nsICellBroadcastListener
-{
-private:
-  CellBroadcast* mCellBroadcast;
-
-public:
-  NS_DECL_ISUPPORTS
-  NS_FORWARD_SAFE_NSICELLBROADCASTLISTENER(mCellBroadcast)
-
-  Listener(CellBroadcast* aCellBroadcast)
-    : mCellBroadcast(aCellBroadcast)
-  {
-    MOZ_ASSERT(mCellBroadcast);
-  }
-
-  void Disconnect()
-  {
-    MOZ_ASSERT(mCellBroadcast);
-    mCellBroadcast = nullptr;
-  }
-};
-
-NS_IMPL_ISUPPORTS1(CellBroadcast::Listener, nsICellBroadcastListener)
 
 /**
  * CellBroadcast Implementation.
@@ -50,6 +20,7 @@ DOMCI_DATA(MozCellBroadcast, CellBroadcast)
 
 NS_INTERFACE_MAP_BEGIN(CellBroadcast)
   NS_INTERFACE_MAP_ENTRY(nsIDOMMozCellBroadcast)
+  NS_INTERFACE_MAP_ENTRY(nsICellBroadcastListener)
   NS_DOM_INTERFACE_MAP_ENTRY_CLASSINFO(MozCellBroadcast)
 NS_INTERFACE_MAP_END_INHERITING(nsDOMEventTargetHelper)
 
@@ -62,18 +33,16 @@ CellBroadcast::CellBroadcast(nsPIDOMWindow *aWindow,
 {
   BindToOwner(aWindow);
 
-  mListener = new Listener(this);
-  DebugOnly<nsresult> rv = mProvider->RegisterCellBroadcastMsg(mListener);
+  DebugOnly<nsresult> rv = mProvider->Register(this);
   NS_WARN_IF_FALSE(NS_SUCCEEDED(rv),
                    "Failed registering Cell Broadcast callback with provider");
 }
 
 CellBroadcast::~CellBroadcast()
 {
-  MOZ_ASSERT(mProvider && mListener);
+  MOZ_ASSERT(mProvider);
 
-  mListener->Disconnect();
-  mProvider->UnregisterCellBroadcastMsg(mListener);
+  mProvider->Unregister(this);
 }
 
 NS_IMPL_EVENT_HANDLER(CellBroadcast, received)
@@ -103,7 +72,7 @@ NS_NewCellBroadcast(nsPIDOMWindow* aWindow,
     aWindow->GetCurrentInnerWindow();
 
   nsCOMPtr<nsICellBroadcastProvider> provider =
-    do_GetService(NS_RILCONTENTHELPER_CONTRACTID);
+    do_GetService(CELLBROADCAST_SERVICE_CONTRACTID);
   NS_ENSURE_STATE(provider);
 
   nsRefPtr<mozilla::dom::CellBroadcast> cb =
