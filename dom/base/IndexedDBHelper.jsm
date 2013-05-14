@@ -4,13 +4,8 @@
 
 "use strict";
 
-let DEBUG = 0;
-let debug;
-if (DEBUG) {
-  debug = function (s) { dump("-*- IndexedDBHelper: " + s + "\n"); }
-} else {
-  debug = function (s) {}
-}
+const DEBUG = false;
+function debug(s) { dump("-*- IndexedDBHelper: " + s + "\n"); }
 
 const Cu = Components.utils;
 const Cc = Components.classes;
